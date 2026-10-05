@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pit Log</title>
+<meta name="theme-color" content="#B8500A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pit Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  :root{
+    --bg:#EEF2F0;
+    --surface:#FFFFFF;
+    --surface-2:#E2E8E5;
+    --ink:#16201D;
+    --ink-muted:#5A6763;
+    --ink-faint:#8B9793;
+    --border:#D6DEDA;
+    --accent:#B8500A;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#F3E1CF;
+    --good:#157A54;
+    --good-soft:#DCEEE4;
+    --warn:#B4790A;
+    --warn-soft:#F3E7CE;
+    --maint:#3E5C78;
+    --maint-soft:#E1E8EE;
+    --shadow: 0 1px 2px rgba(22,32,29,0.06), 0 6px 16px -8px rgba(22,32,29,0.18);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#10140F;
+      --surface:#1A211B;
+      --surface-2:#212A22;
+      --ink:#EAF1EC;
+      --ink-muted:#9CACA4;
+      --ink-faint:#6E7C74;
+      --border:#2C3830;
+      --accent:#E2823D;
+      --accent-ink:#20140A;
+      --accent-soft:#3A2B18;
+      --good:#4FBE94;
+      --good-soft:#173327;
+      --warn:#E0A93E;
+      --warn-soft:#332A14;
+      --maint:#8FADCC;
+      --maint-soft:#1E2A36;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 20px -10px rgba(0,0,0,0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#10140F;
+    --surface:#1A211B;
+    --surface-2:#212A22;
+    --ink:#EAF1EC;
+    --ink-muted:#9CACA4;
+    --ink-faint:#6E7C74;
+    --border:#2C3830;
+    --accent:#E2823D;
+    --accent-ink:#20140A;
+    --accent-soft:#3A2B18;
+    --good:#4FBE94;
+    --good-soft:#173327;
+    --warn:#E0A93E;
+    --warn-soft:#332A14;
+    --maint:#8FADCC;
+    --maint-soft:#1E2A36;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 20px -10px rgba(0,0,0,0.5);
+    color-scheme: dark;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Noto Sans JP","Zen Kaku Gothic New",-apple-system,sans-serif;
+    padding-inline:16px;
+    padding-block: 0 96px;
+  }
+  .mono{ font-family:"JetBrains Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+  h1,h2,h3{ font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif; margin:0; text-wrap:balance; }
+  button{ font-family:inherit; }
+
+  header.top{
+    position:sticky; top:env(safe-area-inset-top,0px);
+    background:var(--bg);
+    padding-block:14px 10px;
+    z-index:20;
+    display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+    border-bottom:1px solid transparent;
+  }
+  header.top .brand{ display:flex; flex-direction:column; gap:2px; }
+  header.top h1{ font-size:20px; font-weight:900; letter-spacing:.01em; }
+  header.top .sub{ font-size:11.5px; color:var(--ink-muted); }
+  header.top .today{ font-size:12px; color:var(--ink-faint); text-align:right; white-space:nowrap; }
+
+  main{ max-width:560px; margin-inline:auto; display:flex; flex-direction:column; gap:22px; }
+
+  /* stat tiles */
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .tile{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:12px 10px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:6px; min-width:0;
+  }
+  .tile .label{ font-size:10.5px; color:var(--ink-muted); font-weight:500; letter-spacing:.02em; }
+  .tile .value{ font-size:19px; font-weight:700; line-height:1.1; display:flex; align-items:baseline; gap:3px; }
+  .tile .value .unit{ font-size:10.5px; font-weight:500; color:var(--ink-muted); }
+  .tile .delta{ font-size:10.5px; font-weight:500; }
+  .tile .delta.up{ color:var(--good); }
+  .tile .delta.down{ color:var(--warn); }
+
+  /* chart */
+  .panel{
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:14px 14px 10px; box-shadow:var(--shadow);
+  }
+  .panel .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .panel .panel-head h2{ font-size:13.5px; font-weight:700; }
+  .panel .panel-head .avg{ font-size:11px; color:var(--ink-muted); }
+  .chart-wrap{ position:relative; }
+  svg.chart{ display:block; width:100%; height:auto; overflow:visible; }
+  .chart .gridline{ stroke:var(--border); stroke-width:1; }
+  .chart .avgline{ stroke:var(--ink-faint); stroke-width:1; stroke-dasharray:3 3; }
+  .chart .area{ fill:var(--accent); opacity:.12; }
+  .chart .line{ fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+  .chart .dot{ fill:var(--surface); stroke:var(--accent); stroke-width:2; cursor:pointer; }
+  .chart .dot.active{ fill:var(--accent); }
+  .chart .axislabel{ fill:var(--ink-faint); font-size:9px; font-family:"JetBrains Mono",monospace; }
+  .chart-empty{ font-size:12.5px; color:var(--ink-muted); padding:20px 4px 24px; text-align:center; }
+  .tooltip{
+    position:absolute; pointer-events:none; background:var(--ink); color:var(--bg);
+    font-size:11px; padding:5px 8px; border-radius:8px; white-space:nowrap;
+    transform:translate(-50%,-120%); opacity:0; transition:opacity .1s ease; z-index:5;
+  }
+  .tooltip.show{ opacity:1; }
+
+  /* filter chips */
+  .chips{ display:flex; gap:6px; }
+  .chip{
+    border:1px solid var(--border); background:var(--surface); color:var(--ink-muted);
+    font-size:12px; font-weight:500; padding:6px 12px; border-radius:999px; cursor:pointer;
+  }
+  .chip[aria-pressed="true"]{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
+
+  /* log list */
+  .log{ display:flex; flex-direction:column; gap:8px; }
+  .log-head{ display:flex; align-items:center; justify-content:space-between; }
+  .log-head h2{ font-size:13.5px; font-weight:700; }
+  .card{
+    display:flex; gap:10px; align-items:stretch;
+    background:var(--surface); border:1px solid var(--border); border-radius:13px;
+    padding:11px 12px; box-shadow:var(--shadow); cursor:pointer; text-align:left; width:100%;
+  }
+  .card .stripe{ width:3px; border-radius:3px; flex-shrink:0; }
+  .card.fuel .stripe{ background:var(--accent); }
+  .card.maintenance .stripe{ background:var(--maint); }
+  .card .body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .card .row1{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .card .date{ font-size:12px; color:var(--ink-muted); font-weight:500; }
+  .card .kind{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; letter-spacing:.02em; }
+  .card.fuel .kind{ background:var(--accent-soft); color:var(--accent); }
+  .card.maintenance .kind{ background:var(--maint-soft); color:var(--maint); }
+  .card .main{ font-size:14px; font-weight:700; }
+  .card .meta{ font-size:11.5px; color:var(--ink-muted); display:flex; flex-wrap:wrap; gap:x 8px; gap:2px 10px; }
+  .card .eff{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap; align-self:flex-start; }
+  .eff.good{ background:var(--good-soft); color:var(--good); }
+  .eff.warn{ background:var(--warn-soft); color:var(--warn); }
+  .eff.flat{ background:var(--surface-2); color:var(--ink-faint); }
+  .empty-log{ font-size:12.5px; color:var(--ink-muted); padding:24px 4px; text-align:center; }
+
+  /* fab */
+  .fab{
+    position:fixed; right:20px; bottom:calc(20px + env(safe-area-inset-bottom,0px));
+    width:56px; height:56px; border-radius:50%; border:none;
+    background:var(--accent); color:var(--accent-ink); font-size:26px; line-height:1;
+    box-shadow:0 6px 18px -4px rgba(0,0,0,.35);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:30;
+  }
+  .fab:active{ transform:scale(.94); }
+  .fab-photo{
+    position:fixed; right:20px; bottom:calc(88px + env(safe-area-inset-bottom,0px));
+    width:44px; height:44px; border-radius:50%; border:1px solid var(--border);
+    background:var(--surface); color:var(--ink); font-size:18px;
+    box-shadow:var(--shadow);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:30;
+  }
+  .fab-photo:active{ transform:scale(.94); }
+  .fab-photo[hidden]{ display:none; }
+
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(10,14,11,.45); z-index:40;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .overlay[hidden]{ display:none; }
+  .sheet{
+    width:100%; max-width:560px; background:var(--surface);
+    border-radius:20px 20px 0 0; padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));
+    max-height:88vh; overflow-y:auto; box-shadow:0 -8px 30px rgba(0,0,0,.25);
+  }
+  .sheet h2{ font-size:16px; font-weight:700; margin-bottom:14px; }
+  .type-toggle{ display:flex; gap:8px; margin-bottom:14px; }
+  .type-toggle button{
+    flex:1; padding:10px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--ink-muted); font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .type-toggle button[aria-pressed="true"].t-fuel{ background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
+  .type-toggle button[aria-pressed="true"].t-maint{ background:var(--maint-soft); color:var(--maint); border-color:var(--maint); }
+  .field{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .field label{ font-size:12px; font-weight:500; color:var(--ink-muted); }
+  .field input, .field textarea{
+    font-family:inherit; font-size:15px; padding:10px 11px; border-radius:10px;
+    border:1px solid var(--border); background:var(--bg); color:var(--ink); width:100%;
+  }
+  .field input:focus, .field textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .field .computed{ font-size:11px; color:var(--ink-faint); }
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .sheet-actions{ display:flex; gap:10px; margin-top:6px; }
+  .btn{ padding:12px; border-radius:11px; font-weight:700; font-size:14px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); cursor:pointer; flex:1; }
+  .btn.primary{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .btn.danger{ background:transparent; color:var(--warn); border-color:var(--warn); flex:0 0 auto; }
+  .btn.danger.confirm{ background:var(--warn); color:var(--accent-ink); }
+  .hint{ font-size:11.5px; color:var(--ink-faint); margin-top:-2px; margin-bottom:14px; }
+
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+  /* header settings button */
+  .icon-btn{ background:var(--surface); border:1px solid var(--border); color:var(--ink-muted);
+    width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  header.top .right{ display:flex; align-items:center; gap:10px; }
+  .settings-text{ font-size:12.5px; color:var(--ink-muted); line-height:1.7; margin:0 0 14px; }
+  .settings-msg{ font-size:12.5px; margin:10px 0 0; min-height:1.2em; color:var(--good); }
+  .settings-msg.err{ color:var(--warn); }
+  .stack{ display:flex; flex-direction:column; gap:10px; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{ margin:0; -webkit-tap-highlight-color:transparent; }
+
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <h1>Pit Log</h1>
+    <div class="sub">給油・整備の記録</div>
+  </div>
+  <div class="right">
+    <div class="today mono" id="todayLabel"></div>
+    <button class="icon-btn" id="fabSettings" type="button" aria-label="バックアップと設定">⚙</button>
+  </div>
+</header>
+
+<main>
+  <section class="stats" aria-label="サマリー">
+    <div class="tile">
+      <div class="label">平均燃費</div>
+      <div class="value mono" id="statAvg">—<span class="unit">km/L</span></div>
+      <div class="delta" id="statAvgDelta"></div>
+    </div>
+    <div class="tile">
+      <div class="label">直近の燃費</div>
+      <div class="value mono" id="statLatest">—<span class="unit">km/L</span></div>
+      <div class="delta" id="statLatestDelta"></div>
+    </div>
+    <div class="tile">
+      <div class="label">総走行距離</div>
+      <div class="value mono" id="statDistance">—<span class="unit">km</span></div>
+      <div class="delta" id="statCount"></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="燃費の推移">
+    <div class="panel-head">
+      <h2>燃費の推移</h2>
+      <div class="avg" id="chartRange"></div>
+    </div>
+    <div class="chart-wrap" id="chartWrap">
+      <div class="chart-empty" id="chartEmpty">給油量を記録すると、燃費の推移が表示されます</div>
+    </div>
+  </section>
+
+  <section class="log">
+    <div class="log-head">
+      <h2>記録</h2>
+      <div class="chips" role="group" aria-label="絞り込み">
+        <button class="chip" data-filter="all" aria-pressed="true">すべて</button>
+        <button class="chip" data-filter="fuel" aria-pressed="false">給油</button>
+        <button class="chip" data-filter="maintenance" aria-pressed="false">整備</button>
+      </div>
+    </div>
+    <div id="logList"></div>
+  </section>
+</main>
+
+<button class="fab" id="fabAdd" aria-label="記録を追加">+</button>
+
+<div class="overlay" id="settingsOverlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <h2 id="settingsTitle">バックアップ</h2>
+    <p class="settings-text">記録はこのスマホの中に保存されています。機種変更や万一の消失に備えて、ときどきファイルに書き出しておくと安心です。書き出したファイルを読み込めば、記録を元に戻せます。</p>
+    <div class="stack">
+      <button type="button" class="btn primary" id="btnExport">記録をファイルに書き出す</button>
+      <button type="button" class="btn" id="btnImportFile">ファイルから読み込む</button>
+    </div>
+    <p class="settings-text" style="margin-top:12px">読み込みは「追加・上書き」です。いま入っている記録が消えることはありません(同じ記録は上書きされます)。</p>
+    <div class="settings-msg" id="settingsMsg" role="status"></div>
+    <div class="sheet-actions"><button type="button" class="btn" id="btnSettingsClose">閉じる</button></div>
+    <input type="file" id="fileInput" accept="application/json,.json" hidden>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">記録を追加</h2>
+    <div class="type-toggle">
+      <button type="button" class="t-fuel" data-type="fuel" aria-pressed="true">⛽ 給油</button>
+      <button type="button" class="t-maint" data-type="maintenance" aria-pressed="false">🔧 整備</button>
+    </div>
+    <form id="entryForm">
+      <div class="field">
+        <label for="f-date">日付</label>
+        <input type="date" id="f-date" required>
+      </div>
+
+      <div class="field" id="field-distance">
+        <label for="f-distance">走行距離(前回給油から)</label>
+        <input type="number" id="f-distance" inputmode="numeric" min="0" step="1" placeholder="例: 480">
+      </div>
+
+      <div id="fuelFields">
+        <div class="two-col">
+          <div class="field">
+            <label for="f-liters">給油量(L)</label>
+            <input type="number" id="f-liters" inputmode="decimal" min="0" step="0.01" placeholder="例: 32.5">
+          </div>
+          <div class="field">
+            <label for="f-price">単価(円/L)</label>
+            <input type="number" id="f-price" inputmode="decimal" min="0" step="0.1" placeholder="例: 172">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-amount">金額(円)</label>
+          <input type="number" id="f-amount" inputmode="numeric" min="0" step="1" placeholder="単価×給油量で自動計算">
+          <div class="computed" id="ampComputed"></div>
+        </div>
+        <div class="field">
+          <label for="f-eff-preview">燃費(自動計算)</label>
+          <input type="text" id="f-eff-preview" disabled placeholder="走行距離と給油量から算出">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-note" id="noteLabel">メモ(任意)</label>
+        <textarea id="f-note" rows="2" placeholder="任意"></textarea>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="button" class="btn danger" id="btnDelete" hidden>削除</button>
+        <button type="button" class="btn" id="btnCancel">キャンセル</button>
+        <button type="submit" class="btn primary" id="btnSave">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="tooltip" id="chartTooltip"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORE_KEY = 'pitlog.v1';
+  var INITIAL_ENTRIES = [
+  {
+    "amount": null,
+    "date": "2026-09-23",
+    "distanceKm": null,
+    "liters": null,
+    "note": "オイル交換・車検",
+    "source": "import",
+    "type": "maintenance",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-1"
+  },
+  {
+    "amount": 8670,
+    "date": "2026-09-08",
+    "distanceKm": 526,
+    "liters": 51,
+    "note": "ENEOSレギュラー・大中里SS(富士宮市)",
+    "source": "receipt",
+    "type": "fuel",
+    "unitPrice": 170,
+    "updatedAt": "2026-09-23T00:08:00.000Z",
+    "id": "seed-2"
+  },
+  {
+    "amount": null,
+    "date": "2026-08-28",
+    "distanceKm": 586,
+    "liters": null,
+    "note": "画像から取り込み(給油量など未記録)",
+    "source": "import",
+    "type": "fuel",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-3"
+  },
+  {
+    "amount": null,
+    "date": "2026-08-14",
+    "distanceKm": 575,
+    "liters": null,
+    "note": "画像から取り込み(給油量など未記録)",
+    "source": "import",
+    "type": "fuel",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-4"
+  },
+  {
+    "amount": null,
+    "date": "2026-08-04",
+    "distanceKm": 606,
+    "liters": null,
+    "note": "画像から取り込み(給油量など未記録)",
+    "source": "import",
+    "type": "fuel",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-5"
+  },
+  {
+    "amount": null,
+    "date": "2026-07-24",
+    "distanceKm": 717,
+    "liters": null,
+    "note": "画像から取り込み(給油量など未記録)",
+    "source": "import",
+    "type": "fuel",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-6"
+  },
+  {
+    "amount": null,
+    "date": "2026-07-11",
+    "distanceKm": 897,
+    "liters": null,
+    "note": "画像から取り込み(給油量など未記録)",
+    "source": "import",
+    "type": "fuel",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-7"
+  },
+  {
+    "amount": null,
+    "date": "2026-06-17",
+    "distanceKm": 827,
+    "liters": null,
+    "note": "画像から取り込み(給油量など未記録)",
+    "source": "import",
+    "type": "fuel",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-8"
+  },
+  {
+    "amount": null,
+    "date": "2026-05-13",
+    "distanceKm": 891,
+    "liters": null,
+    "note": "画像から取り込み(給油量など未記録)",
+    "source": "import",
+    "type": "fuel",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-9"
+  },
+  {
+    "amount": null,
+    "date": "2026-04-18",
+    "distanceKm": 790,
+    "liters": null,
+    "note": "画像から取り込み(給油量など未記録)",
+    "source": "import",
+    "type": "fuel",
+    "unitPrice": null,
+    "updatedAt": "2026-09-23T00:00:00.000Z",
+    "id": "seed-10"
+  }
+];
+
+  var els = {
+    today: document.getElementById('todayLabel'),
+    statAvg: document.getElementById('statAvg'),
+    statAvgDelta: document.getElementById('statAvgDelta'),
+    statLatest: document.getElementById('statLatest'),
+    statLatestDelta: document.getElementById('statLatestDelta'),
+    statDistance: document.getElementById('statDistance'),
+    statCount: document.getElementById('statCount'),
+    chartWrap: document.getElementById('chartWrap'),
+    chartEmpty: document.getElementById('chartEmpty'),
+    chartRange: document.getElementById('chartRange'),
+    chartTooltip: document.getElementById('chartTooltip'),
+    logList: document.getElementById('logList'),
+    chips: Array.prototype.slice.call(document.querySelectorAll('.chip')),
+    fab: document.getElementById('fabAdd'),
+    overlay: document.getElementById('overlay'),
+    sheetTitle: document.getElementById('sheetTitle'),
+    typeBtns: Array.prototype.slice.call(document.querySelectorAll('.type-toggle button')),
+    form: document.getElementById('entryForm'),
+    fDate: document.getElementById('f-date'),
+    fieldDistance: document.getElementById('field-distance'),
+    fDistance: document.getElementById('f-distance'),
+    fuelFields: document.getElementById('fuelFields'),
+    fLiters: document.getElementById('f-liters'),
+    fPrice: document.getElementById('f-price'),
+    fAmount: document.getElementById('f-amount'),
+    ampComputed: document.getElementById('ampComputed'),
+    fEffPreview: document.getElementById('f-eff-preview'),
+    fNote: document.getElementById('f-note'),
+    noteLabel: document.getElementById('noteLabel'),
+    btnDelete: document.getElementById('btnDelete'),
+    btnCancel: document.getElementById('btnCancel'),
+    btnSave: document.getElementById('btnSave'),
+    fabSettings: document.getElementById('fabSettings'),
+    settingsOverlay: document.getElementById('settingsOverlay'),
+    btnExport: document.getElementById('btnExport'),
+    btnImportFile: document.getElementById('btnImportFile'),
+    btnSettingsClose: document.getElementById('btnSettingsClose'),
+    settingsMsg: document.getElementById('settingsMsg'),
+    fileInput: document.getElementById('fileInput')
+  };
+
+  // 端末の現地時間での今日 (UTCだと日本の午前中に前日になるため)
+  function localISO(d){
+    var m = d.getMonth()+1, day = d.getDate();
+    return d.getFullYear() + '-' + (m<10?'0':'') + m + '-' + (day<10?'0':'') + day;
+  }
+  var todayISO = localISO(new Date());
+  els.today.textContent = fmtDateLong(todayISO);
+
+  var state = {
+    entries: [],
+    filter: 'all',
+    editingId: null,
+    currentType: 'fuel',
+    deleteArmed: false
+  };
+
+  function fmtDateLong(iso){
+    var d = new Date(iso + 'T00:00:00');
+    if (isNaN(d)) return iso;
+    return (d.getMonth()+1) + '/' + d.getDate() + ' (' + ['日','月','火','水','木','金','土'][d.getDay()] + ')';
+  }
+  function fmtDateShort(iso){
+    var d = new Date(iso + 'T00:00:00');
+    if (isNaN(d)) return iso;
+    return (d.getMonth()+1) + '/' + d.getDate();
+  }
+  function yen(n){
+    if (n === null || n === undefined || isNaN(n)) return null;
+    return '¥' + Math.round(n).toLocaleString('ja-JP');
+  }
+  function num(n, digits){
+    if (n === null || n === undefined || isNaN(n)) return null;
+    return (digits === 0) ? Math.round(n).toLocaleString('ja-JP') : Number(n.toFixed(digits)).toLocaleString('ja-JP', {minimumFractionDigits:digits, maximumFractionDigits:digits});
+  }
+  function computeEfficiency(e){
+    if (e.type !== 'fuel') return null;
+    if (typeof e.distanceKm === 'number' && e.distanceKm > 0 && typeof e.liters === 'number' && e.liters > 0){
+      return e.distanceKm / e.liters;
+    }
+    return null;
+  }
+
+  /* ---------- rendering ---------- */
+
+  function render(){
+    var entries = state.entries.slice().sort(function(a,b){ return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+    renderStats(entries);
+    renderChart(entries);
+    renderLog(entries);
+  }
+
+  function renderStats(entries){
+    var fuelWithEff = entries.filter(function(e){ return e.type==='fuel' && computeEfficiency(e) !== null; });
+    var avg = fuelWithEff.length ? fuelWithEff.reduce(function(s,e){ return s+computeEfficiency(e); },0) / fuelWithEff.length : null;
+    var latestFuel = entries.find(function(e){ return e.type==='fuel'; });
+    var latestEff = latestFuel ? computeEfficiency(latestFuel) : null;
+    var totalDist = entries.reduce(function(s,e){ return s + (typeof e.distanceKm==='number' ? e.distanceKm : 0); },0);
+    var fuelCount = entries.filter(function(e){ return e.type==='fuel'; }).length;
+
+    els.statAvg.innerHTML = (avg!==null ? num(avg,1) : '—') + '<span class="unit">km/L</span>';
+    els.statAvgDelta.textContent = fuelWithEff.length ? ('記録 ' + fuelWithEff.length + '件') : '';
+
+    els.statLatest.innerHTML = (latestEff!==null ? num(latestEff,1) : '—') + '<span class="unit">km/L</span>';
+    if (latestEff!==null && avg!==null && fuelWithEff.length>1){
+      var diff = latestEff - avg;
+      var pct = avg ? (diff/avg*100) : 0;
+      els.statLatestDelta.textContent = (diff>=0?'平均+':'平均') + pct.toFixed(0) + '%';
+      els.statLatestDelta.className = 'delta ' + (diff>=0?'up':'down');
+    } else {
+      els.statLatestDelta.textContent = latestFuel ? fmtDateShort(latestFuel.date) : '';
+      els.statLatestDelta.className = 'delta';
+    }
+
+    els.statDistance.innerHTML = (totalDist>0 ? num(totalDist,0) : '—') + '<span class="unit">km</span>';
+    els.statCount.textContent = '給油 ' + fuelCount + '回';
+  }
+
+  function renderChart(entries){
+    var pts = entries.filter(function(e){ return e.type==='fuel' && computeEfficiency(e)!==null; })
+      .slice().sort(function(a,b){ return a.date < b.date ? -1 : 1; })
+      .slice(-14);
+
+    els.chartWrap.querySelectorAll('svg').forEach(function(n){ n.remove(); });
+
+    if (pts.length < 2){
+      els.chartEmpty.hidden = false;
+      els.chartRange.textContent = '';
+      return;
+    }
+    els.chartEmpty.hidden = true;
+
+    var vals = pts.map(function(p){ return computeEfficiency(p); });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var pad = (max-min) * 0.25 || max*0.15 || 1;
+    var yMin = Math.max(0, min - pad), yMax = max + pad;
+    var avg = vals.reduce(function(s,v){return s+v;},0)/vals.length;
+
+    els.chartRange.textContent = fmtDateShort(pts[0].date) + ' 〜 ' + fmtDateShort(pts[pts.length-1].date);
+
+    var W = 500, H = 150, padL = 34, padR = 10, padT = 12, padB = 20;
+    var innerW = W - padL - padR, innerH = H - padT - padB;
+
+    function x(i){ return padL + (pts.length===1 ? innerW/2 : innerW * i/(pts.length-1)); }
+    function y(v){ return padT + innerH * (1 - (v - yMin)/(yMax - yMin || 1)); }
+
+    var linePath = pts.map(function(p,i){ return (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(computeEfficiency(p)).toFixed(1); }).join(' ');
+    var areaPath = linePath + ' L' + x(pts.length-1).toFixed(1) + ',' + (padT+innerH).toFixed(1) + ' L' + x(0).toFixed(1) + ',' + (padT+innerH).toFixed(1) + ' Z';
+
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(svgNS,'svg');
+    svg.setAttribute('viewBox','0 0 ' + W + ' ' + H);
+    svg.setAttribute('class','chart');
+    svg.setAttribute('role','img');
+    svg.setAttribute('aria-label','燃費の推移グラフ');
+
+    function el(tag, attrs){
+      var n = document.createElementNS(svgNS, tag);
+      for (var k in attrs) n.setAttribute(k, attrs[k]);
+      return n;
+    }
+
+    // gridlines (min/mid/max)
+    [yMin, (yMin+yMax)/2, yMax].forEach(function(v){
+      svg.appendChild(el('line', {x1:padL, x2:W-padR, y1:y(v).toFixed(1), y2:y(v).toFixed(1), class:'gridline'}));
+    });
+    var lbl = el('text', {x:4, y:(y(yMax)+4).toFixed(1), class:'axislabel'}); lbl.textContent = yMax.toFixed(1); svg.appendChild(lbl);
+    var lbl2 = el('text', {x:4, y:(y(yMin)+4).toFixed(1), class:'axislabel'}); lbl2.textContent = yMin.toFixed(1); svg.appendChild(lbl2);
+
+    // average dashed line
+    svg.appendChild(el('line', {x1:padL, x2:W-padR, y1:y(avg).toFixed(1), y2:y(avg).toFixed(1), class:'avgline'}));
+
+    svg.appendChild(el('path', {d:areaPath, class:'area'}));
+    svg.appendChild(el('path', {d:linePath, class:'line'}));
+
+    // x labels: first + last date
+    var xl1 = el('text', {x:x(0).toFixed(1), y:H-4, class:'axislabel', 'text-anchor':'start'}); xl1.textContent = fmtDateShort(pts[0].date); svg.appendChild(xl1);
+    var xl2 = el('text', {x:x(pts.length-1).toFixed(1), y:H-4, class:'axislabel', 'text-anchor':'end'}); xl2.textContent = fmtDateShort(pts[pts.length-1].date); svg.appendChild(xl2);
+
+    var dots = [];
+    pts.forEach(function(p,i){
+      var d = el('circle', {cx:x(i).toFixed(1), cy:y(computeEfficiency(p)).toFixed(1), r:4, class:'dot', tabindex:'0'});
+      d.addEventListener('pointerenter', function(){ showTip(p, d); });
+      d.addEventListener('focus', function(){ showTip(p, d); });
+      d.addEventListener('click', function(){ showTip(p, d); });
+      d.addEventListener('pointerleave', function(){ hideTip(); });
+      d.addEventListener('blur', function(){ hideTip(); });
+      svg.appendChild(d);
+      dots.push(d);
+    });
+
+    els.chartWrap.appendChild(svg);
+
+    function showTip(p, dotEl){
+      dots.forEach(function(dd){ dd.classList.remove('active'); });
+      dotEl.classList.add('active');
+      var rect = dotEl.getBoundingClientRect();
+      var wrapRect = els.chartWrap.getBoundingClientRect();
+      els.chartTooltip.textContent = fmtDateShort(p.date) + '・' + computeEfficiency(p).toFixed(1) + ' km/L';
+      els.chartTooltip.style.left = (rect.left - wrapRect.left + rect.width/2) + 'px';
+      els.chartTooltip.style.top = (rect.top - wrapRect.top) + 'px';
+      els.chartTooltip.classList.add('show');
+    }
+    function hideTip(){
+      dots.forEach(function(dd){ dd.classList.remove('active'); });
+      els.chartTooltip.classList.remove('show');
+    }
+  }
+
+  function renderLog(entries){
+    var filtered = state.filter==='all' ? entries : entries.filter(function(e){ return e.type===state.filter; });
+    els.logList.innerHTML = '';
+    if (!filtered.length){
+      var empty = document.createElement('div');
+      empty.className = 'empty-log';
+      empty.textContent = '記録がありません';
+      els.logList.appendChild(empty);
+      return;
+    }
+    var fuelWithEff = entries.filter(function(e){ return e.type==='fuel' && computeEfficiency(e)!==null; });
+    var avg = fuelWithEff.length ? fuelWithEff.reduce(function(s,e){ return s+computeEfficiency(e); },0)/fuelWithEff.length : null;
+
+    filtered.forEach(function(e){
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'card ' + e.type;
+      var stripe = document.createElement('div'); stripe.className='stripe'; card.appendChild(stripe);
+      var body = document.createElement('div'); body.className='body';
+
+      var row1 = document.createElement('div'); row1.className='row1';
+      var date = document.createElement('div'); date.className='date mono'; date.textContent = fmtDateLong(e.date);
+      var kind = document.createElement('div'); kind.className='kind'; kind.textContent = e.type==='fuel' ? '給油' : '整備';
+      row1.appendChild(date); row1.appendChild(kind);
+      body.appendChild(row1);
+
+      if (e.type === 'fuel'){
+        var main = document.createElement('div'); main.className='main mono';
+        var mainParts = [];
+        if (typeof e.distanceKm === 'number') mainParts.push(num(e.distanceKm,0) + ' km');
+        if (typeof e.liters === 'number') mainParts.push(num(e.liters,1) + ' L');
+        main.textContent = mainParts.length ? mainParts.join(' / ') : '未記録';
+        body.appendChild(main);
+
+        var metaParts = [];
+        if (typeof e.unitPrice === 'number') metaParts.push('@' + num(e.unitPrice,1) + '円');
+        if (typeof e.amount === 'number') metaParts.push(yen(e.amount));
+        if (e.note) metaParts.push(e.note);
+        if (metaParts.length){
+          var meta = document.createElement('div'); meta.className='meta mono'; meta.textContent = metaParts.join('  ·  ');
+          body.appendChild(meta);
+        }
+
+        var eff = computeEfficiency(e);
+        if (eff !== null){
+          var effPill = document.createElement('div');
+          var cls = 'flat';
+          if (avg !== null && fuelWithEff.length > 1){ cls = eff >= avg ? 'good' : 'warn'; }
+          effPill.className = 'eff ' + cls + ' mono';
+          effPill.textContent = eff.toFixed(1) + ' km/L';
+          body.appendChild(effPill);
+        }
+      } else {
+        var mmain = document.createElement('div'); mmain.className='main'; mmain.textContent = e.note || '整備記録';
+        body.appendChild(mmain);
+        if (typeof e.distanceKm === 'number'){
+          var mmeta = document.createElement('div'); mmeta.className='meta mono'; mmeta.textContent = num(e.distanceKm,0) + ' km 時点';
+          body.appendChild(mmeta);
+        }
+      }
+
+      card.appendChild(body);
+      card.addEventListener('click', function(){ openEdit(e); });
+      els.logList.appendChild(card);
+    });
+  }
+
+  /* ---------- form / modal ---------- */
+
+  function setType(t){
+    state.currentType = t;
+    els.typeBtns.forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.type===t ? 'true':'false'); });
+    els.fuelFields.hidden = (t !== 'fuel');
+    els.fieldDistance.querySelector('label').textContent = t==='fuel' ? '走行距離(前回給油から)' : '走行距離(任意)';
+    els.noteLabel.textContent = t==='fuel' ? 'メモ(任意)' : '内容';
+    els.fNote.required = (t === 'maintenance');
+    els.fNote.placeholder = t==='fuel' ? '任意' : '例: オイル交換・車検';
+  }
+
+  els.typeBtns.forEach(function(b){
+    b.addEventListener('click', function(){ setType(b.dataset.type); });
+  });
+
+  function recalcAmount(){
+    var liters = parseFloat(els.fLiters.value);
+    var price = parseFloat(els.fPrice.value);
+    if (!isNaN(liters) && !isNaN(price) && liters>0 && price>0){
+      els.fAmount.value = Math.round(liters*price);
+      els.ampComputed.textContent = '単価×給油量から自動計算';
+    } else {
+      els.ampComputed.textContent = '';
+    }
+    recalcEffPreview();
+  }
+  function recalcEffPreview(){
+    var dist = parseFloat(els.fDistance.value);
+    var liters = parseFloat(els.fLiters.value);
+    if (!isNaN(dist) && !isNaN(liters) && dist>0 && liters>0){
+      els.fEffPreview.value = (dist/liters).toFixed(1) + ' km/L';
+    } else {
+      els.fEffPreview.value = '';
+    }
+  }
+  els.fLiters.addEventListener('input', recalcAmount);
+  els.fPrice.addEventListener('input', recalcAmount);
+  els.fDistance.addEventListener('input', recalcEffPreview);
+
+  function openAdd(){
+    state.editingId = null;
+    state.deleteArmed = false;
+    els.sheetTitle.textContent = '記録を追加';
+    els.form.reset();
+    els.fDate.value = todayISO;
+    els.btnDelete.hidden = true;
+    resetDeleteBtn();
+    setType('fuel');
+    els.ampComputed.textContent = '';
+    els.fEffPreview.value = '';
+    showSheet();
+  }
+
+  function openEdit(e){
+    state.editingId = e.id;
+    state.deleteArmed = false;
+    els.sheetTitle.textContent = '記録を編集';
+    setType(e.type);
+    els.fDate.value = e.date || todayISO;
+    els.fDistance.value = (typeof e.distanceKm==='number') ? e.distanceKm : '';
+    els.fLiters.value = (typeof e.liters==='number') ? e.liters : '';
+    els.fPrice.value = (typeof e.unitPrice==='number') ? e.unitPrice : '';
+    els.fAmount.value = (typeof e.amount==='number') ? e.amount : '';
+    els.fNote.value = e.note || '';
+    recalcEffPreview();
+    els.btnDelete.hidden = false;
+    resetDeleteBtn();
+    showSheet();
+  }
+
+  function resetDeleteBtn(){
+    state.deleteArmed = false;
+    els.btnDelete.textContent = '削除';
+    els.btnDelete.classList.remove('confirm');
+  }
+
+  function showSheet(){ els.overlay.hidden = false; }
+  function hideSheet(){ els.overlay.hidden = true; state.editingId = null; }
+
+  els.fab.addEventListener('click', openAdd);
+  els.btnCancel.addEventListener('click', hideSheet);
+  els.overlay.addEventListener('click', function(ev){ if (ev.target === els.overlay) hideSheet(); });
+
+  els.btnDelete.addEventListener('click', function(){
+    if (!state.deleteArmed){
+      state.deleteArmed = true;
+      els.btnDelete.textContent = 'もう一度押すと削除';
+      els.btnDelete.classList.add('confirm');
+      return;
+    }
+    var id = state.editingId;
+    if (id) deleteEntry(id);
+    hideSheet();
+  });
+
+  els.chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      els.chips.forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
+      state.filter = chip.dataset.filter;
+      render();
+    });
+  });
+
+  els.form.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var type = state.currentType;
+    var date = els.fDate.value || todayISO;
+    var distanceKm = els.fDistance.value !== '' ? parseFloat(els.fDistance.value) : null;
+    var note = els.fNote.value.trim();
+
+    if (type === 'maintenance' && !note){
+      els.fNote.focus();
+      return;
+    }
+
+    var data = {
+      type: type,
+      date: date,
+      distanceKm: (typeof distanceKm==='number' && !isNaN(distanceKm)) ? distanceKm : null,
+      note: note,
+      source: 'manual',
+      updatedAt: new Date().toISOString()
+    };
+    if (type === 'fuel'){
+      var liters = els.fLiters.value !== '' ? parseFloat(els.fLiters.value) : null;
+      var price = els.fPrice.value !== '' ? parseFloat(els.fPrice.value) : null;
+      var amount = els.fAmount.value !== '' ? parseFloat(els.fAmount.value) : null;
+      data.liters = (typeof liters==='number' && !isNaN(liters)) ? liters : null;
+      data.unitPrice = (typeof price==='number' && !isNaN(price)) ? price : null;
+      data.amount = (typeof amount==='number' && !isNaN(amount)) ? amount : null;
+    } else {
+      data.liters = null; data.unitPrice = null; data.amount = null;
+    }
+
+    saveEntry(state.editingId, data);
+    hideSheet();
+  });
+
+  /* ---------- persistence (localStorage) ---------- */
+
+  function newId(){ return 'e-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7); }
+
+  function persist(){
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({ version:1, entries: state.entries }));
+      return true;
+    } catch(e){
+      console.log('persist failed', e);
+      return false;
+    }
+  }
+
+  function loadStore(){
+    var raw = null;
+    try { raw = localStorage.getItem(STORE_KEY); } catch(e){}
+    if (raw){
+      try {
+        var obj = JSON.parse(raw);
+        if (obj && Array.isArray(obj.entries)) return obj.entries;
+      } catch(e){ console.log('parse failed', e); }
+    }
+    // 初回起動: 初期データ(Artifact版から移行した記録)を投入
+    var seeded = INITIAL_ENTRIES.map(function(e){ return Object.assign({}, e); });
+    state.entries = seeded;
+    persist();
+    return seeded;
+  }
+
+  function saveEntry(id, data){
+    if (id){
+      var idx = state.entries.findIndex(function(e){ return e.id === id; });
+      var merged = Object.assign({id:id}, data);
+      if (idx >= 0) state.entries[idx] = merged; else state.entries.push(merged);
+    } else {
+      state.entries.push(Object.assign({id:newId()}, data));
+    }
+    persist();
+    render();
+  }
+
+  function deleteEntry(id){
+    state.entries = state.entries.filter(function(e){ return e.id !== id; });
+    persist();
+    render();
+  }
+
+  /* ---------- backup: export / import ---------- */
+
+  function setMsg(text, isErr){
+    els.settingsMsg.textContent = text || '';
+    els.settingsMsg.className = 'settings-msg' + (isErr ? ' err' : '');
+  }
+
+  function exportFileName(){
+    return 'pitlog-backup-' + todayISO + '.json';
+  }
+
+  els.fabSettings.addEventListener('click', function(){ setMsg(''); els.settingsOverlay.hidden = false; });
+  els.btnSettingsClose.addEventListener('click', function(){ els.settingsOverlay.hidden = true; });
+  els.settingsOverlay.addEventListener('click', function(ev){ if (ev.target === els.settingsOverlay) els.settingsOverlay.hidden = true; });
+
+  els.btnExport.addEventListener('click', function(){
+    var payload = JSON.stringify({ app:'pit-log', version:1, exportedAt:new Date().toISOString(), entries: state.entries }, null, 2);
+    var name = exportFileName();
+    var blob = new Blob([payload], { type:'application/json' });
+    var file = null;
+    try { file = new File([blob], name, { type:'application/json' }); } catch(e){}
+
+    // iPhone/Android: 共有シート(「ファイルに保存」など)を優先
+    if (file && navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
+      navigator.share({ files:[file], title:'Pit Log バックアップ' }).then(function(){
+        setMsg('書き出しました(' + state.entries.length + '件)');
+      }).catch(function(err){
+        if (err && err.name === 'AbortError') return;
+        fallbackDownload(blob, name);
+      });
+      return;
+    }
+    fallbackDownload(blob, name);
+  });
+
+  function fallbackDownload(blob, name){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    setMsg('書き出しました(' + state.entries.length + '件)');
+  }
+
+  els.btnImportFile.addEventListener('click', function(){ els.fileInput.value = ''; els.fileInput.click(); });
+
+  function cleanNum(v){ return (typeof v === 'number' && isFinite(v)) ? v : null; }
+
+  els.fileInput.addEventListener('change', function(){
+    var f = els.fileInput.files && els.fileInput.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var obj;
+      try { obj = JSON.parse(reader.result); } catch(e){ setMsg('ファイルを読み込めませんでした(JSON形式ではありません)', true); return; }
+      var list = Array.isArray(obj) ? obj : (obj && Array.isArray(obj.entries) ? obj.entries : null);
+      if (!list){ setMsg('Pit Logのバックアップファイルではないようです', true); return; }
+      var added = 0, updated = 0, skipped = 0;
+      list.forEach(function(raw){
+        if (!raw || typeof raw !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.date || '')){ skipped++; return; }
+        var type = raw.type === 'maintenance' ? 'maintenance' : 'fuel';
+        var rec = {
+          id: (typeof raw.id === 'string' && raw.id) ? raw.id : newId(),
+          type: type, date: raw.date,
+          distanceKm: cleanNum(raw.distanceKm),
+          liters: cleanNum(raw.liters), unitPrice: cleanNum(raw.unitPrice), amount: cleanNum(raw.amount),
+          note: typeof raw.note === 'string' ? raw.note : '',
+          source: typeof raw.source === 'string' ? raw.source : 'import',
+          updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString()
+        };
+        var idx = state.entries.findIndex(function(e){ return e.id === rec.id; });
+        if (idx >= 0){ state.entries[idx] = rec; updated++; } else { state.entries.push(rec); added++; }
+      });
+      persist(); render();
+      setMsg('読み込みました(追加 ' + added + '件 / 上書き ' + updated + '件' + (skipped ? ' / 読み飛ばし ' + skipped + '件' : '') + ')');
+    };
+    reader.onerror = function(){ setMsg('ファイルを読み込めませんでした', true); };
+    reader.readAsText(f);
+  });
+
+  /* ---------- boot ---------- */
+
+  state.entries = loadStore();
+  render();
+
+  if (navigator.storage && navigator.storage.persist){
+    navigator.storage.persist().catch(function(){});
+  }
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(err){ console.log('sw failed', err); });
+    });
+  }
+})();
+</script>
+</body>
+</html>
