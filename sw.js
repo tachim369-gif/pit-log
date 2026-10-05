@@ -1,4 +1,4 @@
-const CACHE = 'pitlog-v4';
+const CACHE = 'pitlog-v5';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'favicon-64.png'];
 
 self.addEventListener('install', (e) => {
